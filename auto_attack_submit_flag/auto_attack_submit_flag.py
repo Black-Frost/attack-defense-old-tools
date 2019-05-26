@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import mysql.connector
 from pwn import *
 import re
@@ -17,8 +19,8 @@ mydb = mysql.connector.connect(
 )
 
 def write_log(error):
-	f = open(LOG_FILE,"w")
-	f.write("[%s] %s" %(datetime.datetime.now(),error))
+	f = open(LOG_FILE,"a")
+	f.write("[%s] %s\n" %(datetime.datetime.now(),error))
 	f.close()
 
 def get_flag_from_output(out):
@@ -34,11 +36,11 @@ def attack(challenge_name=None,team_name=None):
 	
 	myresult = mycursor.fetchall()
 	columns = [col[0] for col in mycursor.description]
-        print columns
+        #print columns
         
 	rows = [dict(zip(columns,row)) for row in myresult]
 	for row in rows:
-                print row
+                #print row
 	  	ip = row["ip"];
 	  	port = row["port"]
 	  	payload_dir = row["payload_dir"]
@@ -52,5 +54,15 @@ def attack(challenge_name=None,team_name=None):
 	  	r.close()
 
 def submit_flag(flag):
+	return
 
+def main():
+	if len(sys.argv) <= 2:
+		attack()
+	else:
+		attack(sys.argv[1],sys.argv[2])
+
+
+if __name__ == '__main__':
+	main()
 
