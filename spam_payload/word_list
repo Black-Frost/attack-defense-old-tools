@@ -1,0 +1,3 @@
+cat /home/`whoami`/flag
+id
+ls
