@@ -1,0 +1,24 @@
+{
+  "flagfmt": "MatesCTF{.*}",
+  "username": "user",
+  "password": "pass",
+  "logfile": "log.txt",
+  "roundtime": 10,
+  "challenges": [
+    {
+      "name": "chall1",
+      "teams": [
+        {
+          "name": "efiens",
+          "ip": "123.123.123.123",
+          "port": "4000"
+        },
+        {
+          "name": "noobk",
+          "ip": "456.456.456.456",
+          "port": "5000"
+        }
+      ]
+    }
+  ]
+}
