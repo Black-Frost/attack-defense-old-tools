@@ -1,0 +1,40 @@
+{
+  "flagfmt": "matesctf{.*}",
+  "username": "minosis101",
+  "password": "12345678",
+  "logfile": "log.txt",
+  "roundtime": 10,
+  "submit": {
+    "url": "https://www.root-me.org/en/Challenges/:chall_name",
+    "headers": {
+    },
+    "datafmt": {
+      "var_ajax": "form",
+      "id_auteur": "139044",
+      "id_rubrique": "160",
+      "page": "auteur",
+      "formulaire_action": "validation_challenge",
+      "formulaire_action_args": "Uek0X+SKJfBeBhYvOGsiRWd/YDBuOsWWijoBuinedVudVEtqgTRud0I7VoVY+OSs1qwsoi8h6GR0un/soAd310ZLa2p6dEoH2IA=",
+      "id_challenge": ":chall_id",
+      "passe": ":flag"
+    }
+  },
+  "challenges": [
+    {
+      "name": "Cryptanalysis/Encoding-ASCII",
+      "id": "141",
+      "teams": [
+        {
+          "name": "efiens",
+          "ip": "123.123.123.123",
+          "port": "4000"
+        },
+        {
+          "name": "noobk",
+          "ip": "456.456.456.456",
+          "port": "5000"
+        }
+      ]
+    }
+  ]
+}
