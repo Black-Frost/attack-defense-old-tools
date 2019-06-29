@@ -1,40 +1,55 @@
 {
-  "flagfmt": "matesctf{.*}",
-  "username": "minosis101",
-  "password": "12345678",
+  "flagfmt": "MATESCTF{.*}",
+  "username": "noobk",
+  "password": "3E4JNaxo6qbRLMBbJPWO",
   "logfile": "log.txt",
-  "roundtime": 10,
+  "roundtime": 60,
   "submit": {
-    "url": "https://www.root-me.org/en/Challenges/:chall_name",
+    "url": "https://final.matesctf.org/final-scoreboard/api/challenge-submit",
     "headers": {
     },
     "datafmt": {
-      "var_ajax": "form",
-      "id_auteur": "139044",
-      "id_rubrique": "160",
-      "page": "auteur",
-      "formulaire_action": "validation_challenge",
-      "formulaire_action_args": "Uek0X+SKJfBeBhYvOGsiRWd/YDBuOsWWijoBuinedVudVEtqgTRud0I7VoVY+OSs1qwsoi8h6GR0un/soAd310ZLa2p6dEoH2IA=",
-      "id_challenge": ":chall_id",
-      "passe": ":flag"
+      "id": ":chall_id",
+      "flag": ":flag",
+      "csrf_token": ":csrf"
     }
   },
   "challenges": [
     {
-      "name": "Cryptanalysis/Encoding-ASCII",
-      "id": "141",
-      "teams": [
-        {
-          "name": "efiens",
-          "ip": "123.123.123.123",
-          "port": "4000"
-        },
-        {
-          "name": "noobk",
-          "ip": "456.456.456.456",
-          "port": "5000"
-        }
-      ]
+      "name": "Pure ECC",
+      "id": "9",
+      "ip": "proxy.matesctf.org",
+      "port": "4003"
+    },
+    {
+      "name": "secure_login",
+      "id": "16",
+      "ip": "proxy.matesctf.org",
+      "port": "4006"
+    },
+    {
+      "name": "Tinyhttpd",
+      "id": "14",
+      "ip": "192.168.110.11",
+      "port": "4002"
+    },
+    {
+      "name": "sail",
+      "id": "15",
+      "ip": "proxy.matesctf.org",
+      "port": "4004"
+    },
+    {
+      "name": "Flag Transfer",
+      "id": "13",
+      "ip": "192.168.110.11",
+      "port": "4001"
+    },
+    {
+      "name": "Munchi",
+      "id": "10",
+      "ip": "proxy.matesctf.org",
+      "port": "4005"
     }
   ]
 }

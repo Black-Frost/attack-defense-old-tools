@@ -73,12 +73,13 @@ def loadSetting():
         CHALL_SCRIPTLANG = json.loads(open('CHALL_SCRIPTLANG.json').read())
     except FileNotFoundError:
         CHALL_SCRIPTLANG = dict.fromkeys(CHALLENGES, [])
+        json.dump(CHALL_SCRIPTLANG, open('CHALL_SCRIPTLANG.json', 'w'), indent=4)
     try:
         TEAM_FLAG = json.loads(open('TEAM_FLAG.json').read())
     except FileNotFoundError:
         TEAM_FLAG = {
             chall['name']: {
-                team['name']: [""] for team in chall['teams']
+                tid: [""] for tid in range(8) if tid != 1
             } for chall in SETTINGS['challenges']
         }
 
@@ -87,13 +88,24 @@ loadSetting()
 LOG = FILE(LOG_FILE)
 STOP = False
 MONITORING = False
+ATTACK_NOW = False
 LASTATTACK = datetime.now()
+
+
+SESSION = requests.session()
+SESSION.get("https://final.matesctf.org/final-scoreboard/#!/")
+SESSION.post("https://final.matesctf.org/final-scoreboard/api/sign-in", data={
+    "username": SCOREBOARD_USERNAME,
+    "password": SCOREBOARD_PASSWORD,
+    "csrf_token": SESSION.cookies["csrf_cookie"]
+})
 
 
 def submit(chall, team, flag):
     global LOG
     global MONITORING
     global TEAM_FLAG
+    global SESSION
     try:
         flag = flag.decode()
     except AttributeError:
@@ -106,15 +118,16 @@ def submit(chall, team, flag):
     data = {}
     for key, val in datafmt.items():
         data[key] = val
-        if val == ':CHALL_ID':
-            data[key] = CHALL_ID[chall]
+        if val == ':chall_id':
+            data[key] = int(CHALL_ID[chall])
         if val == ':flag':
             data[key] = flag
-            data[key] = "HELLO WORLD 2ac376481ae546cd689d5b91275d324e"
-    url = SUBMIT['url'].replace(':chall_name', chall)
-    # r = s.post(url, data=data)
-    # msg = r.text
-    msg = "SUBMIT [{}] [{}] {}".format(chall, team, flag)
+        if val == ':csrf':
+            data[key] = SESSION.cookies["csrf_cookie"]
+    url = SUBMIT['url']
+    r = SESSION.post(url, data=data)
+    msg = r.text
+    # msg = "SUBMIT [{}] [{}] {}".format(chall, team, flag)
     LOG.write(msg)
     if MONITORING:
         print(msg)
@@ -140,8 +153,8 @@ def attack_thread(chall, script, lang, name, ip, port):
     flag = re.findall(REGEX_FLAG, output)
     if exit_code != 0 or len(flag) == 0:
         result = "FAILED"
-    msg = "[{}] [{}.{}] [{}:{}] [{}] {} {}".format(
-            chall, script, lang, ip, port, name, result, flag
+    msg = "[{}] [{}.{}] [{}:{}] {} {}".format(
+            chall, script, lang, ip, port, result, flag
         )
     LOG.write(msg)
     if len(flag) > 0:
@@ -168,18 +181,29 @@ def attack():
     global LASTATTACK
     for x in CHALL_TEAMS:
         chall = x["name"]
-        teams = x["teams"]
+        teams = [{
+            "name": tid,
+            "ip": x["ip"],
+            "port": x["port"] + str(tid)
+        } for tid in range(8) if tid != 1]
         attack_chall(chall, teams)
     LASTATTACK = datetime.now()
 
 
 def get_payload(chall, file, lang):
+    global CHALL_SCRIPTLANG
     if not os.path.exists(chall):
         os.makedirs(chall)
     if not os.path.exists(file):
         print("File not exists")
         return
-    CHALL_SCRIPTLANG[chall].append(lang)
+    print("{} {} {}".format(chall, file, lang))
+    for key, val in CHALL_SCRIPTLANG.items():
+        if key == chall:
+            CHALL_SCRIPTLANG[key] = val + [lang]
+        else:
+            CHALL_SCRIPTLANG[key] = val
+    print(CHALL_SCRIPTLANG)
     shutil.copy2(file, "{}/{}".format(chall, len(CHALL_SCRIPTLANG[chall])))
     json.dump(CHALL_SCRIPTLANG, open('CHALL_SCRIPTLANG.json', 'w'), indent=4)
 
@@ -199,6 +223,7 @@ def menu():
     global CHALLENGES
     global CHALL_SCRIPTLANG
     global MONITORING
+    global ATTACK_NOW
     while True:
         questions = [
             {
@@ -225,8 +250,8 @@ def menu():
             monitor()
 
         if answers == 'Attack now':
-            attack()
-            MONITORING = True
+            ATTACK_NOW = True
+            monitor()
 
         if answers == 'Reload settings.json':
             loadSetting()
@@ -236,6 +261,12 @@ def menu():
 
         if answers == 'Add a payload':
             questions = [
+              {
+                'type': 'list',
+                'name': 'chall',
+                'message': 'The challenge for this payload',
+                'choices': CHALLENGES
+              },
               {
                 'type': 'list',
                 'name': 'lang',
@@ -250,12 +281,6 @@ def menu():
                 'type': 'input',
                 'name': 'file',
                 'message': 'Payload file path'
-              },
-              {
-                'type': 'list',
-                'name': 'chall',
-                'message': 'The challenge for this payload',
-                'choices': CHALL_TEAMS
               }
             ]
             answers = prompt(questions)
@@ -265,11 +290,13 @@ def menu():
 def auto():
     global STOP
     global LASTATTACK
+    global ATTACK_NOW
     while not STOP:
         deltatime = datetime.now() - LASTATTACK
-        if deltatime.seconds < ROUND_TIME:
+        if deltatime.seconds < ROUND_TIME and not ATTACK_NOW:
             time.sleep(1)
             continue
+        ATTACK_NOW = False
         attack()
 
 
