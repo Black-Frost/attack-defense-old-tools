@@ -126,6 +126,14 @@ def submit(chall, team, flag):
             data[key] = SESSION.cookies["csrf_cookie"]
     url = SUBMIT['url']
     r = SESSION.post(url, data=data)
+    if 'error_code' in r.text:
+        SESSION.post("https://final.matesctf.org/final-scoreboard/api/sign-in", data={
+            "username": SCOREBOARD_USERNAME,
+            "password": SCOREBOARD_PASSWORD,
+            "csrf_token": SESSION.cookies["csrf_cookie"]
+        })
+        r = SESSION.post(url, data=data)
+
     msg = r.text
     # msg = "SUBMIT [{}] [{}] {}".format(chall, team, flag)
     LOG.write(msg)
@@ -142,7 +150,7 @@ def attack_thread(chall, script, lang, name, ip, port):
     process = Popen([lang, script, ip, port], stdout=PIPE, stderr=DEVNULL)
     (output, err) = process.communicate()
     try:
-        exit_code = process.wait(timeout=120)
+        exit_code = process.wait(timeout=20)
     except TimeoutError:
         process.terminate()
     result = "SUCCESS"

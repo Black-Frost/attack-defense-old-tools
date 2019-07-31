@@ -1,0 +1,14 @@
+{
+    "Pure ECC": [
+        "python2"
+    ],
+    "secure_login": [
+        "python2"
+    ],
+    "Tinyhttpd": [],
+    "sail": [],
+    "Flag Transfer": [],
+    "Munchi": [
+        "python2"
+    ]
+}

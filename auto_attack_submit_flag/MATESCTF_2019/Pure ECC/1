@@ -1,0 +1,103 @@
+from pwn import *
+from sys import argv
+
+from random import getrandbits
+from fastecdsa.keys import gen_keypair
+from fastecdsa.curve import P256
+from fastecdsa.point import Point
+from Crypto.Cipher import AES
+from Crypto.Util.number import long_to_bytes, bytes_to_long
+from hashlib import sha256
+from base64 import b64encode, b64decode
+
+flag_dir = './flag'
+
+
+class ECC_DRNG():
+    def __init__(self, seed, P, Q):
+        self.seed = seed
+        self.P = P
+        self.Q = Q
+
+    def getbits(self):
+        r = (self.seed * self.P).x
+        self.seed = r
+        return long_to_bytes((r * self.Q).x)
+
+
+def sanitize(i):
+    try:
+        ret = int(i,10)
+    except:
+        ret = int(i,16)
+    return ret
+
+
+BLOCK_SIZE = 32
+pad = lambda s: s + (BLOCK_SIZE - len(s) % BLOCK_SIZE) * chr(BLOCK_SIZE - len(s) % BLOCK_SIZE)
+unpad = lambda s: s[:-ord(s[len(s) - 1:])]
+
+
+def xor(dest, src):
+    assert len(dest) == len(src)
+    return ''.join(chr(ord(dest[i])^ord(src[i])) for i in range(len(dest)))
+
+
+class AES_CNV():
+    # This was literally taken from Chung96vn
+    def __init__(self, key):
+        assert len(key) == BLOCK_SIZE
+        self.key = key
+
+    def encrypt(self, plain_text, iv):
+        assert len(iv) == BLOCK_SIZE
+        plain_text = pad(plain_text)
+        assert len(plain_text) % BLOCK_SIZE == 0
+        cipher_text = ''
+        aes = AES.new(self.key, AES.MODE_ECB)
+        h = iv
+        for i in range(len(plain_text)//BLOCK_SIZE):
+            block = plain_text[i*BLOCK_SIZE:(i+1)*BLOCK_SIZE]
+            block = xor(block, h)
+            cipher_block = aes.encrypt(block)
+            cipher_text += cipher_block
+            h = sha256(cipher_block).digest()
+        return b64encode(iv + cipher_text)
+
+    def decrypt(self, cipher_text):
+        plaintext = ''
+        iv = cipher_text[:BLOCK_SIZE]
+        h = iv
+        cipher_text = cipher_text[BLOCK_SIZE:]
+        aes = AES.new(self.key, AES.MODE_ECB)
+        plain = ''
+        for i in range(len(cipher_text) // BLOCK_SIZE):
+            block = cipher_text[i * BLOCK_SIZE:(i+1) * BLOCK_SIZE]
+            plain_block = aes.decrypt(block)
+            plain_block = xor(plain_block, h)
+            plain += plain_block
+            h = sha256(block).digest()
+        return unpad(plain)
+
+
+def attack_1():
+    r = remote(argv[1], argv[2])
+    r.recvuntil('[Y/n] ')
+    r.sendline('Y')
+    r.recvuntil('Q: ')
+    r.sendline('(0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296, 0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5)')
+    r.recvuntil('d: ')
+    r.sendline('1')
+    r.recvuntil('Your encrypted flag is ')
+
+    flag = r.recvline().strip('\n')
+    print(flag)
+    flag = b64decode(flag)
+    IV = flag[:BLOCK_SIZE]
+    key = long_to_bytes((bytes_to_long(IV) * P256.G).x)
+    cipher = AES_CNV(key = key)
+    flag = cipher.decrypt(flag)
+    print(flag)
+
+
+attack_1()
