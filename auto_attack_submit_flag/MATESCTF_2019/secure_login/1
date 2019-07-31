@@ -1,0 +1,39 @@
+from base64 import b64decode, b64encode
+import sys
+
+from pwn import *
+
+
+def attack_1():
+    r = remote(sys.argv[1], sys.argv[2])
+
+    r.recvuntil('Your choice: ')
+    r.sendline('2')
+
+    r.recvuntil('Your choice: ')
+    r.sendline('1')
+
+    r.recvuntil('username: ')
+    r.sendline('a')
+    r.recvuntil('password: ')
+    r.sendline('a')
+
+    r.recvuntil('[SUCCESS] Use this token to login: ')
+    f = r.recvline().strip('\n')
+    f = b64decode(f)
+    f = list(f)
+
+    f[53] = chr(ord(f[53]) ^ 3)
+    f[54] = chr(ord(f[54]) ^ 8)
+    f[55] = chr(ord(f[55]) ^ 7)
+    f[56] = chr(ord(f[56]) ^ 26)
+
+    r.recvuntil('Your choice: ')
+    r.sendline('2')
+    r.recvuntil('Your token: ')
+    r.sendline(b64encode(''.join(f)))
+    print(r.recvline())
+
+
+if __name__ == "__main__":
+    attack_1()
