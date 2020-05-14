@@ -36,7 +36,7 @@ class Payload():
             f.write(str(self) + '\n')
 
     def __repr__(self):
-        return '{}: [{}] [{}] [{}] [{},{}] [{}]'.format(
+        return '{:.3f}: [{}] [{:6d}] [{:7s}] [{},{}] [{}]'.format(
             self.time, self.isFlag, self.pid, self.chall, self.connaddr, self.source, self.data
         )
 
@@ -132,6 +132,7 @@ def proxyRun():
     # FIXME: Handle edge case `Address already in used` when closing proxy
     s = socket(AF_INET, SOCK_STREAM)
     s.setsockopt(SOL_IP, IP_TRANSPARENT, 1)
+    s.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
     s.bind(('0.0.0.0', 4444))
     s.listen()
     try:

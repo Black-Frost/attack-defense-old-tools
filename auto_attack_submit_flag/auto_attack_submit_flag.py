@@ -13,7 +13,10 @@ from threading import Thread
 from subprocess import Popen, PIPE, DEVNULL
 from PyInquirer import prompt
 
-class FILE:
+from State import State
+
+
+class File:
     def __init__(self, f):
         self.f = open(f, "a+", 1)
         self.access = 0
@@ -29,129 +32,13 @@ class FILE:
         self.access -= 1
 
 
-# TODO: Move to data class
-SETTINGS            = None
-CHALLENGES          = None
-CHALL_ID            = None
-CHALL_TEAMS         = None
-REGEX_FLAG          = None
-ROUND_TIME          = None
-SCOREBOARD_USERNAME = None
-SCOREBOARD_PASSWORD = None
-SUBMIT              = None
-CHALL_SCRIPTLANG    = None
-TEAM_FLAG           = None
-LOG_FILE            = None
-NUM_TEAM            = None
-MY_TEAM_ID          = None
-
-
-def loadSetting():
-    global SETTINGS
-    global CHALLENGES
-    global CHALL_ID
-    global CHALL_TEAMS
-    global REGEX_FLAG
-    global ROUND_TIME
-    global SCOREBOARD_USERNAME
-    global SCOREBOARD_PASSWORD
-    global SUBMIT
-    global CHALL_SCRIPTLANG
-    global TEAM_FLAG
-    global LOG_FILE
-    global NUM_TEAM
-    global MY_TEAM_ID
-
-    SETTINGS = json.loads(open('settings.json').read())
-
-    CHALLENGES = list(map(lambda x: x['name'], SETTINGS['challenges']))
-    CHALL_ID = {chall['name']: chall['id'] for chall in SETTINGS['challenges']}
-    CHALL_TEAMS = SETTINGS['challenges']
-    REGEX_FLAG = SETTINGS["flagfmt"]
-    ROUND_TIME = SETTINGS["roundtime"]
-    SCOREBOARD_USERNAME = SETTINGS['username']
-    SCOREBOARD_PASSWORD = SETTINGS['password']
-    SUBMIT = SETTINGS["submit"]
-    LOG_FILE = SETTINGS['logfile']
-    NUM_TEAM = SETTINGS['num_team']
-    MY_TEAM_ID = SETTINGS['teamid']
-    try:
-        CHALL_SCRIPTLANG = json.loads(open('CHALL_SCRIPTLANG.json').read())
-    except FileNotFoundError:
-        CHALL_SCRIPTLANG = dict.fromkeys(CHALLENGES, [])
-        json.dump(CHALL_SCRIPTLANG, open('CHALL_SCRIPTLANG.json', 'w'), indent=4)
-    try:
-        TEAM_FLAG = json.loads(open('TEAM_FLAG.json').read())
-    except FileNotFoundError:
-        TEAM_FLAG = {
-            chall['name']: {
-                tid: [""] for tid in range(1, NUM_TEAM) if tid != MY_TEAM_ID
-            } for chall in SETTINGS['challenges']
-        }
-
-
-loadSetting()
-LOG = FILE(LOG_FILE)
-STOP = False
-MONITORING = False
-ATTACK_NOW = False
-LASTATTACK = datetime.now()
-
-
-SESSION = requests.session()
-SESSION.get(SUBMIT['scoreboard'])
-SESSION.post(SUBMIT['signin'], data={
-    "username": SCOREBOARD_USERNAME,
-    "password": SCOREBOARD_PASSWORD,
-    "csrf_token": SESSION.cookies["csrf_cookie"]
-})
-
-def submit(chall, team, flag):
-    global LOG
-    global MONITORING
-    global TEAM_FLAG
-    global SESSION
-    try:
-        flag = flag.decode()
-    except AttributeError:
-        pass
-    lastflag = TEAM_FLAG[chall][team][0]
-    # print("{} {} {}".format(lastflag, flag, lastflag != flag))
-    if lastflag == flag:
-        return
-    datafmt = SUBMIT['datafmt']
-    data = {}
-    for key, val in datafmt.items():
-        data[key] = val
-        if val == ':chall_id':
-            data[key] = int(CHALL_ID[chall])
-        if val == ':flag':
-            data[key] = flag
-        if val == ':csrf':
-            data[key] = SESSION.cookies["csrf_cookie"]
-    url = SUBMIT['url']
-    r = SESSION.post(url, data=data)
-    if 'error_code' in r.text:
-        SESSION.post(SUBMIT['signin'], data={
-            "username": SCOREBOARD_USERNAME,
-            "password": SCOREBOARD_PASSWORD,
-            "csrf_token": SESSION.cookies["csrf_cookie"]
-        })
-        r = SESSION.post(url, data=data)
-
-    msg = r.text
-    # msg = "SUBMIT [{}] [{}] {}".format(chall, team, flag)
-    LOG.write(msg)
-    if MONITORING:
-        print(msg)
-    return
-    TEAM_FLAG[chall][team].insert(0, flag)
-    json.dump(TEAM_FLAG, open('TEAM_FLAG.json', 'w'), indent=4)
+STATE = State()
+LOG = File(LOG_FILE)
 
 
 def attack_thread(chall, script, lang, name, ip, port):
     global LOG
-    global MONITORING
+    global STATE
     process = Popen([lang, script, ip, port], stdout=PIPE, stderr=DEVNULL)
     (output, err) = process.communicate()
     try:
@@ -163,7 +50,7 @@ def attack_thread(chall, script, lang, name, ip, port):
         output = output.decode()
     except AttributeError:
         pass
-    flag = re.findall(REGEX_FLAG, output)
+    flag = re.findall(self.regex_flag, output)
     if exit_code != 0 or len(flag) == 0:
         result = "FAILED"
     msg = "[{}] [{}.{}] [{}:{}] {} {}".format(
@@ -171,13 +58,13 @@ def attack_thread(chall, script, lang, name, ip, port):
         )
     LOG.write(msg)
     if len(flag) > 0:
-        submit(chall, name, flag[0])
-    if MONITORING:
+        STATE.submit(chall, name, flag[0])
+    if STATE.monitoring:
         print(msg)
 
 
 def attack_chall(chall, teams):
-    for f, lang in enumerate(CHALL_SCRIPTLANG[chall], 1):
+    for f, lang in enumerate(self.chall_scriptlang[chall], 1):
         for t in teams:
             name = t["name"]
             ip = t["ip"]
@@ -190,19 +77,16 @@ def attack_chall(chall, teams):
 
 
 def attack():
+    global STATE
     global LOG
-    global LASTATTACK
-    global NUM_TEAM
-    global MY_TEAM_ID
-    for x in CHALL_TEAMS:
+    for x in self.chall_teams:
         chall = x["name"]
         teams = [{
             "name": tid,
             "ip": x["ip"],
             "port": str(tid) + x["port"]
-        } for tid in range(1, NUM_TEAM) if tid != MY_TEAM_ID]
+        } for tid in range(1, self.num_team) if tid != self.my_team_id]
         attack_chall(chall, teams)
-    LASTATTACK = datetime.now()
 
 
 def get_payload(chall, file, lang):
