@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+from __future__ import print_function, unicode_literals
 import json
 import os
 import re
@@ -7,7 +7,6 @@ import requests
 import shutil
 import time
 
-from __future__ import print_function, unicode_literals
 from datetime import datetime
 from threading import Thread
 from subprocess import Popen, PIPE, DEVNULL

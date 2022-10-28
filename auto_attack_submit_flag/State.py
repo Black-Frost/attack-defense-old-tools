@@ -1,6 +1,7 @@
 import json
 
 from requests_futures.sessions import FuturesSession
+import requests
 
 
 class State:
@@ -12,7 +13,7 @@ class State:
         'round_time',
         'username',
         'password',
-        'submit',
+        'submit_var',
         'chall_scriptlang',
         'team_flag',
         'log_file',
@@ -30,6 +31,7 @@ class State:
         self.stop = False
 
         s = json.loads(open('settings.json').read())
+        SETTINGS = s
 
         self.challenges = list(map(lambda x: x['name'], SETTINGS['challenges']))
         self.chall_id = {
@@ -40,7 +42,7 @@ class State:
         self.round_time = s["roundtime"]
         self.username = s['username']
         self.password = s['password']
-        self.submit = s["submit"]
+        self.submit_var = s["submit"]
         self.log_file = s['logfile']
         self.num_team = s['num_team']
         self.my_team_id = s['teamid']
@@ -62,6 +64,7 @@ class State:
         self.login()
 
     def login(self):
+        SUBMIT = self.submit_var
         self.session.get(SUBMIT['scoreboard'])
         self.session.post(SUBMIT['signin'], data={
             "username": self.username,
@@ -78,7 +81,7 @@ class State:
         # print("{} {} {}".format(lastflag, flag, lastflag != flag))
         if lastflag == flag:
             return
-        datafmt = self.submit['datafmt']
+        datafmt = self.submit_var['datafmt']
         data = {}
         for key, val in datafmt.items():
             data[key] = val
@@ -89,7 +92,7 @@ class State:
             if val == ':csrf':
                 data[key] = self.session.cookies["csrf_cookie"]
 
-        url = self.submit['url']
+        url = self.submit_var['url']
         r = self.session.post(url, data=data)
         if 'error_code' in r.text:
             self.login()
@@ -106,7 +109,7 @@ class State:
 
     def team_chall_port(self, team_id):
         raise Error("Edit team service ip/port to send data here")
-        return list(map(lambda x: return {
+        return list(map(lambda x: {
             "name": team_id,
             "ip": x["ip"],
             "port": str(team_id) + x["port"]
