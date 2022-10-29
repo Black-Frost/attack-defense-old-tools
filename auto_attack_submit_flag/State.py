@@ -64,9 +64,8 @@ class State:
         self.login()
 
     def login(self):
-        SUBMIT = self.submit_var
-        self.session.get(SUBMIT['scoreboard'])
-        self.session.post(SUBMIT['signin'], data={
+        self.session.get(self.submit_var['scoreboard'])
+        self.session.post(self.submit_var['signin'], data={
             "username": self.username,
             "password": self.password,
             "csrf_token": self.session.cookies["csrf_cookie"]
@@ -79,8 +78,8 @@ class State:
             pass
         # lastflag = self.team_flag[chall][team][0]
         # print("{} {} {}".format(lastflag, flag, lastflag != flag))
-        if lastflag == flag:
-            return
+        #if lastflag == flag:
+        #    return
         datafmt = self.submit_var['datafmt']
         data = {}
         for key, val in datafmt.items():
@@ -101,14 +100,14 @@ class State:
         msg = r.text
         # msg = "SUBMIT [{}] [{}] {}".format(chall, team, flag)
         # LOG.write(msg)
-        if MONITORING:
+        if self.monitoring:
             print(msg)
         return
         # self.team_flag[chall][team].insert(0, flag)
         # json.dump(self.team_flag, open('TEAM_FLAG.json', 'w'), indent=4)
 
     def team_chall_port(self, team_id):
-        raise Error("Edit team service ip/port to send data here")
+        raise Exception("Edit team service ip/port to send data here")
         return list(map(lambda x: {
             "name": team_id,
             "ip": x["ip"],

@@ -32,7 +32,8 @@ class File:
 
 
 STATE = State()
-LOG = File(LOG_FILE)
+LOG = File(STATE.log_file)
+STOP = False
 
 
 def attack_thread(chall, script, lang, name, ip, port):
@@ -49,7 +50,7 @@ def attack_thread(chall, script, lang, name, ip, port):
         output = output.decode()
     except AttributeError:
         pass
-    flag = re.findall(self.regex_flag, output)
+    flag = re.findall(STATE.regex_flag, output)
     if exit_code != 0 or len(flag) == 0:
         result = "FAILED"
     msg = "[{}] [{}.{}] [{}:{}] {} {}".format(
@@ -63,7 +64,7 @@ def attack_thread(chall, script, lang, name, ip, port):
 
 
 def attack_chall(chall, teams):
-    for f, lang in enumerate(self.chall_scriptlang[chall], 1):
+    for f, lang in enumerate(STATE.chall_scriptlang[chall], 1):
         for t in teams:
             name = t["name"]
             ip = t["ip"]
@@ -78,13 +79,13 @@ def attack_chall(chall, teams):
 def attack():
     global STATE
     global LOG
-    for x in self.chall_teams:
+    for x in STATE.chall_teams:
         chall = x["name"]
         teams = [{
             "name": tid,
             "ip": x["ip"],
             "port": str(tid) + x["port"]
-        } for tid in range(1, self.num_team) if tid != self.my_team_id]
+        } for tid in range(1, STATE.num_team) if tid != STATE.my_team_id]
         attack_chall(chall, teams)
 
 
@@ -120,11 +121,12 @@ def menu():
     # XXX: Change from PyInquirer to Questionary
     # PyInquirer's upgrade to prompt-tools is too slow,
     # This is optional, we may wait
-    global STOP
-    global CHALLENGES
-    global CHALL_SCRIPTLANG
-    global MONITORING
-    global ATTACK_NOW
+    #global STOP
+    #global CHALLENGES
+    #global CHALL_SCRIPTLANG
+    #global MONITORING
+    #global ATTACK_NOW
+    global STATE
     while True:
         questions = [
             {
@@ -155,7 +157,7 @@ def menu():
             monitor()
 
         if answers == 'Reload settings.json':
-            loadSetting()
+            STATE = State()
 
         if answers == 'Reload CHALL_SCRIPTLANG.json':
             CHALL_SCRIPTLANG = json.loads(open('CHALL_SCRIPTLANG.json').read())
@@ -166,7 +168,7 @@ def menu():
                 'type': 'list',
                 'name': 'chall',
                 'message': 'The challenge for this payload',
-                'choices': CHALLENGES
+                'choices': STATE.challenges
               },
               {
                 'type': 'list',
@@ -190,15 +192,16 @@ def menu():
 
 def auto():
     global STOP
-    global LASTATTACK
-    global ATTACK_NOW
+    #global LASTATTACK
+    #global ATTACK_NOW
     while not STOP:
-        deltatime = datetime.now() - LASTATTACK
-        if deltatime.seconds < ROUND_TIME and not ATTACK_NOW:
-            time.sleep(1)
-            continue
-        ATTACK_NOW = False
+        #deltatime = datetime.now() - LASTATTACK
+        #if deltatime.seconds < ROUND_TIME and not ATTACK_NOW:
+        #    time.sleep(1)
+        #    continue
+        #ATTACK_NOW = False
         attack()
+        time.sleep(2)
 
 
 if __name__ == '__main__':
